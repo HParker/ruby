@@ -3388,7 +3388,19 @@ iseq_peephole_optimize(rb_iseq_t *iseq, LINK_ELEMENT *list, const int do_tailcal
 		ELEM_REMOVE(set1);
 		ELEM_REMOVE(niobj);
 	    }
-	}
+        } else if (IS_NEXT_INSN_ID(niobj, getlocal)) {
+            // getlocal x@0
+            // getlocal x@0
+            // becomes:
+            // getlocal x@0
+            // dup
+            LINK_ELEMENT *get1 = niobj->next;
+            if (OPERAND_AT(iobj, 0) == OPERAND_AT(get1, 0) &&
+                OPERAND_AT(iobj, 1) == OPERAND_AT(get1, 1)) {
+                ((INSN*)get1)->operand_size = 0;
+                INSN_OF(get1) = BIN(dup);
+            }
+        }
     }
 
     if (IS_INSN_ID(iobj, opt_invokebuiltin_delegate)) {
