@@ -425,6 +425,17 @@ class TestYJIT < Test::Unit::TestCase
     RUBY
   end
 
+  def test_hash_aref_with
+    assert_compiles(<<~'RUBY', insns: %i[opt_aref_with])
+      def foo(h, key)
+        h["hi"]
+      end
+
+      foo({ "hi" => "ok"}, "hi")
+      foo({ "hi" => "ok"}, "hi")
+    RUBY
+  end
+
   def test_struct_aset
     assert_compiles(<<~RUBY)
       def foo(obj)

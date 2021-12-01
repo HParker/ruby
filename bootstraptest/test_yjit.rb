@@ -2550,3 +2550,34 @@ assert_equal 'ok', %q{
   foo(s) rescue :ok
   foo(s) rescue :ok
 }
+
+# aref_with string hash
+assert_equal '["ok", "ok"]', %q{
+  def foo(h)
+    h["hi"]
+  end
+
+  [foo({ "hi" => "ok" }), foo({ "hi" => "ok" })]
+}
+
+# opt_aref_with comparing by identity
+# TODO: this test doesn't generate opt_aref_with
+assert_equal('["ok", "ok"]', <<~RUBY, frozen_string_literal: false)
+  def foo(h)
+    h["hi"]
+  end
+
+  h = { "hi" => "ok" }.compare_by_identity
+
+  [foo(h), foo(h)]
+RUBY
+
+
+# aref_with with hash and non-hash
+# assert_equal '["ok", "ok"]', %q{
+#   def foo(h)
+#     h["hi"]
+#   end
+
+#   [foo({ "hi" => "ok" }), foo(Proc.new)]
+# }

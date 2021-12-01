@@ -2175,6 +2175,59 @@ gen_opt_neq(jitstate_t *jit, ctx_t *ctx, codeblock_t *cb)
 }
 
 static codegen_status_t
+gen_opt_aref_with(jitstate_t *jit, ctx_t *ctx, codeblock_t *cb)
+{
+    // Defer compilation so we can specialize on a runtime `self`
+    if (!jit_at_current_insn(jit)) {
+        defer_compilation(jit, ctx);
+        return YJIT_END_BLOCK;
+    }
+
+
+    VALUE key = jit_get_arg(jit, 0);
+    VALUE comptime_recv = jit_peek_at_stack(jit, ctx, 0);
+
+    // Create a side-exit to fall back to the interpreter
+    uint8_t *side_exit = yjit_side_exit(jit, ctx);
+
+    // aref_with only handles static strings
+    RUBY_ASSERT(TYPE(key) == T_STRING);
+
+    if (CLASS_OF(comptime_recv) == rb_cHash) {
+        if (!assume_bop_not_redefined(jit, HASH_REDEFINED_OP_FLAG, BOP_AREF)) {
+            return YJIT_CANT_COMPILE;
+        }
+
+        x86opnd_t recv_opnd = ctx_stack_opnd(ctx, 0);
+
+        // Guard that the receiver is a hash
+        mov(cb, REG0, recv_opnd);
+        jit_guard_known_klass(jit, ctx, rb_cHash, OPND_STACK(0), comptime_recv, OPT_AREF_MAX_CHAIN_DEPTH, side_exit);
+
+        // Setup arguments for rb_hash_aref().
+        mov(cb, C_ARG_REGS[0], REG0);
+        jit_mov_gc_ptr(jit, cb, C_ARG_REGS[1], key);
+
+        // Prepare to call rb_hash_aref(). It might call #hash on the key.
+        // This might not be needed since the key is static and shouldn't #hash
+        jit_prepare_routine_call(jit, ctx, REG0);
+        call_ptr(cb, REG0, (void *)rb_hash_aref);
+
+        // Pop the reciever
+        (void)ctx_stack_pop(ctx, 1);
+
+        // Push the return value onto the stack
+        x86opnd_t stack_ret = ctx_stack_push(ctx, TYPE_UNKNOWN);
+        mov(cb, stack_ret, RAX);
+
+        return YJIT_KEEP_COMPILING;
+    } else {
+        // TODO: fall back to send
+        return YJIT_CANT_COMPILE;
+    }
+}
+
+static codegen_status_t
 gen_opt_aref(jitstate_t *jit, ctx_t *ctx, codeblock_t *cb)
 {
     struct rb_call_data * cd = (struct rb_call_data *)jit_get_arg(jit, 0);
@@ -4991,6 +5044,7 @@ yjit_init_codegen(void)
     yjit_reg_op(BIN(opt_str_uminus), gen_opt_str_uminus);
     yjit_reg_op(BIN(opt_not), gen_opt_not);
     yjit_reg_op(BIN(opt_size), gen_opt_size);
+    yjit_reg_op(BIN(opt_aref_with), gen_opt_aref_with);
     yjit_reg_op(BIN(opt_length), gen_opt_length);
     yjit_reg_op(BIN(opt_regexpmatch2), gen_opt_regexpmatch2);
     yjit_reg_op(BIN(opt_getinlinecache), gen_opt_getinlinecache);
