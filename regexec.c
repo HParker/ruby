@@ -404,7 +404,7 @@ count_num_cache_opcodes(const regex_t* reg, long* num_cache_opcodes_ptr)
 	break;
       case OP_REPEAT_INC:
       case OP_REPEAT_INC_NG:
-	GET_MEMNUM_INC(repeat_mem, p);
+        GET_MEMNUM_INC(repeat_mem, p);
 	if (repeat_mem != current_repeat_mem) {
 	  // A lone or invalid OP_REPEAT_INC is found.
 	  goto impossible;
@@ -481,6 +481,244 @@ count_num_cache_opcodes(const regex_t* reg, long* num_cache_opcodes_ptr)
   }
 
   *num_cache_opcodes_ptr = num_cache_opcodes;
+  return 0;
+
+impossible:
+  *num_cache_opcodes_ptr = NUM_CACHE_OPCODES_IMPOSSIBLE;
+  return 0;
+
+bytecode_error:
+  return ONIGERR_UNDEFINED_BYTECODE;
+}
+
+static OnigPosition
+list_jump_locations(const regex_t* reg, long* num_cache_opcodes_ptr)
+{
+  UChar* p = reg->p;
+  UChar* pend = p + reg->used;
+  LengthType len, tlen, addr;
+  MemNumType repeat_mem;
+  OnigEncoding enc = reg->enc;
+  MemNumType current_repeat_mem = -1;
+  long jump_count = 0;
+  OnigUChar *jump_locations[100]; // TODO: resize
+  long num_cache_opcodes_at_null_check_start = -1;
+
+  // TODO: rewrite this to use the instruction type to traverse.
+  while (p < pend) {
+    switch (*p++) {
+      case OP_FINISH:
+      case OP_END:
+	break;
+
+      case OP_EXACT1: p++; break;
+      case OP_EXACT2: p += 2; break;
+      case OP_EXACT3: p += 3; break;
+      case OP_EXACT4: p += 4; break;
+      case OP_EXACT5: p += 5; break;
+      case OP_EXACTN:
+	GET_LENGTH_INC(len, p); p += len; break;
+      case OP_EXACTMB2N1: p += 2; break;
+      case OP_EXACTMB2N2: p += 4; break;
+      case OP_EXACTMB2N3: p += 6; break;
+      case OP_EXACTMB2N:
+	GET_LENGTH_INC(len, p); p += len * 2; break;
+      case OP_EXACTMB3N:
+	GET_LENGTH_INC(len, p); p += len * 3; break;
+      case OP_EXACTMBN:
+	{
+	  int mb_len;
+	  GET_LENGTH_INC(mb_len, p);
+	  GET_LENGTH_INC(len, p);
+	  p += mb_len * len;
+	}
+	break;
+
+      case OP_EXACT1_IC:
+	len = enclen(enc, p, pend); p += len; break;
+      case OP_EXACTN_IC:
+	GET_LENGTH_INC(len, p); p += len; break;
+
+      case OP_CCLASS:
+      case OP_CCLASS_NOT:
+	p += SIZE_BITSET; break;
+      case OP_CCLASS_MB:
+      case OP_CCLASS_MB_NOT:
+	GET_LENGTH_INC(len, p); p += len; break;
+      case OP_CCLASS_MIX:
+      case OP_CCLASS_MIX_NOT:
+	p += SIZE_BITSET;
+	GET_LENGTH_INC(len, p);
+	p += len;
+	break;
+
+      case OP_ANYCHAR:
+      case OP_ANYCHAR_ML:
+	break;
+      case OP_ANYCHAR_STAR:
+      case OP_ANYCHAR_ML_STAR:
+          fprintf(stderr, "ANY CHAR STAR");
+          jump_locations[jump_count++] = p; break;
+      case OP_ANYCHAR_STAR_PEEK_NEXT:
+      case OP_ANYCHAR_ML_STAR_PEEK_NEXT:
+	p++; break;
+
+      case OP_WORD:
+      case OP_NOT_WORD:
+      case OP_WORD_BOUND:
+      case OP_NOT_WORD_BOUND:
+      case OP_WORD_BEGIN:
+      case OP_WORD_END:
+	break;
+
+      case OP_ASCII_WORD:
+      case OP_NOT_ASCII_WORD:
+      case OP_ASCII_WORD_BOUND:
+      case OP_NOT_ASCII_WORD_BOUND:
+      case OP_ASCII_WORD_BEGIN:
+      case OP_ASCII_WORD_END:
+	break;
+
+      case OP_BEGIN_BUF:
+      case OP_END_BUF:
+      case OP_BEGIN_LINE:
+      case OP_END_LINE:
+      case OP_SEMI_END_BUF:
+      case OP_BEGIN_POSITION:
+	break;
+
+      case OP_BACKREF1:
+      case OP_BACKREF2:
+      case OP_BACKREFN:
+      case OP_BACKREFN_IC:
+      case OP_BACKREF_MULTI:
+      case OP_BACKREF_MULTI_IC:
+      case OP_BACKREF_WITH_LEVEL:
+        p += SIZE_MEMNUM; break;
+
+      case OP_MEMORY_START:
+      case OP_MEMORY_START_PUSH:
+      case OP_MEMORY_END_PUSH:
+      case OP_MEMORY_END_PUSH_REC:
+      case OP_MEMORY_END:
+      case OP_MEMORY_END_REC:
+	p += SIZE_MEMNUM; break;
+
+      case OP_KEEP:
+	break;
+
+      case OP_FAIL:
+	break;
+      case OP_JUMP:
+        jump_locations[jump_count++] = p;
+        fprintf(stderr, "p: %ld ", pend - p);
+        GET_RELADDR_INC(addr, p);
+        fprintf(stderr, "JUMP rel %d\n", addr);
+        
+	p += SIZE_RELADDR;
+	break;
+      case OP_PUSH:
+        jump_locations[jump_count++] = p;
+        fprintf(stderr, "p: %ld ", pend - p);
+        GET_RELADDR_INC(addr, p);
+        fprintf(stderr, "PUSH rel %d\n", addr);
+        
+	p += SIZE_RELADDR;
+	break;
+      case OP_POP:
+	break;
+      case OP_PUSH_OR_JUMP_EXACT1:
+      case OP_PUSH_IF_PEEK_NEXT:
+        fprintf(stderr, "p: %ld ", pend - p);
+        jump_locations[jump_count++] = p;
+        GET_RELADDR_INC(addr, p);
+        fprintf(stderr, "PEEK_* rel %d\n", addr);
+	p += SIZE_RELADDR + 1; break;
+      case OP_REPEAT:
+      case OP_REPEAT_NG:
+        GET_MEMNUM_INC(repeat_mem, p);
+	p += SIZE_RELADDR;
+	break;
+      case OP_REPEAT_INC:
+      case OP_REPEAT_INC_NG:
+        jump_locations[jump_count++] = p;
+        fprintf(stderr, "TODO not sure if this is the right offset change: p: %ld ", pend - p);
+	GET_MEMNUM_INC(repeat_mem, p);
+        // TODO: repeat_mem???
+	break;
+      case OP_REPEAT_INC_SG:
+      case OP_REPEAT_INC_NG_SG:
+          // TODO: Same as above
+	goto impossible;
+      case OP_NULL_CHECK_START:
+	p += SIZE_MEMNUM;
+	if (num_cache_opcodes_at_null_check_start != -1) {
+	// A nested OP_NULL_CHECK_START is not yet supported.
+	  /* goto impossible; */
+	}
+	/* num_cache_opcodes_at_null_check_start = num_cache_opcodes; */
+	break;
+      case OP_NULL_CHECK_END:
+      case OP_NULL_CHECK_END_MEMST_PUSH:
+	p += SIZE_MEMNUM;
+	num_cache_opcodes_at_null_check_start = -1;
+	break;
+      case OP_NULL_CHECK_END_MEMST:
+	p += SIZE_MEMNUM;
+	// OP_NULL_CHECK_START and OP_NULL_CHECK_END_MEMST are counted as cache opcodes.
+	/* if (num_cache_opcodes_at_null_check_start < num_cache_opcodes) { */
+	/*   num_cache_opcodes += 2; */
+	/* } */
+	num_cache_opcodes_at_null_check_start = -1;
+	break;
+
+      case OP_PUSH_POS:
+      case OP_POP_POS:
+      case OP_PUSH_POS_NOT:
+      case OP_FAIL_POS:
+      case OP_PUSH_STOP_BT:
+      case OP_POP_STOP_BT:
+      case OP_LOOK_BEHIND:
+      case OP_PUSH_LOOK_BEHIND_NOT:
+      case OP_FAIL_LOOK_BEHIND_NOT:
+      case OP_PUSH_ABSENT_POS:
+      case OP_ABSENT_END:
+      case OP_ABSENT:
+        GET_RELADDR_INC(addr, p);
+        break;
+      case OP_CALL:
+      case OP_RETURN:
+        GET_ABSADDR_INC(addr, p);
+	break;
+
+      case OP_CONDITION:
+        GET_MEMNUM_INC(repeat_mem, p);
+        GET_RELADDR_INC(addr, p);
+        break;
+        
+      case OP_STATE_CHECK_PUSH:
+      case OP_STATE_CHECK_PUSH_OR_JUMP:
+      case OP_STATE_CHECK:
+      case OP_STATE_CHECK_ANYCHAR_STAR:
+      case OP_STATE_CHECK_ANYCHAR_ML_STAR:
+        break;
+
+      case OP_SET_OPTION_PUSH:
+      case OP_SET_OPTION:
+	p += SIZE_OPTION;
+	break;
+
+      default:
+	goto bytecode_error;
+    }
+  }
+
+  fprintf(stderr, "%ld jumps:\n", jump_count);
+  for (int i = 0; i < jump_count; i++) {
+      fprintf(stderr, "jump location %ld\n", pend - jump_locations[i]);
+  }
+
+  fprintf(stderr, "end jump locations\n");
   return 0;
 
 impossible:
@@ -766,6 +1004,8 @@ onig_check_linear_time(OnigRegexType* reg)
 {
   long num_cache_opcodes = 0;
   count_num_cache_opcodes(reg, &num_cache_opcodes);
+  fprintf(stderr, "GO THERE\n");
+  list_jump_locations(reg, &num_cache_opcodes);
   return num_cache_opcodes != NUM_CACHE_OPCODES_IMPOSSIBLE;
 }
 
@@ -2098,8 +2338,8 @@ reset_match_cache_on_null_check(regex_t* reg, const UChar* pstart, const UChar* 
   match_cache_point_end_bit = match_cache_point_end & 7;
 
 #ifdef ONIG_DEBUG_MATCH_CACHE
-  fprintf(stderr, "MATCH CACHE: reset start %ld (%ld index=%ld bits=%d)\n", match_cache_point_start, cache_point_start, match_cache_point_start_index, match_cache_point_start_bits);
-  fprintf(stderr, "MATCH CACHE: reset end   %ld (%ld index=%ld bits=%d)\n", match_cache_point_end, cache_point_end, match_cache_point_end_index, match_cache_point_end_bits);
+  fprintf(stderr, "MATCH CACHE: reset start %ld (%ld index=%ld bits=%d)\n", match_cache_point_start, cache_point_start, match_cache_point_start_index, match_cache_point_start_bit);
+  fprintf(stderr, "MATCH CACHE: reset end   %ld (%ld index=%ld bits=%d)\n", match_cache_point_end, cache_point_end, match_cache_point_end_index, match_cache_point_end_bit);
 #endif
 
   if (match_cache_point_start_index == match_cache_point_end_index) {
@@ -3964,6 +4204,7 @@ match_at(regex_t* reg, const UChar* str, const UChar* end,
       if (++msa->num_fails >= (long)(end - str) + 1 && msa->num_cache_opcodes == NUM_CACHE_OPCODES_UNINIT) {
 	msa->enable_match_cache = 1;
 	if (msa->num_cache_opcodes == NUM_CACHE_OPCODES_UNINIT) {
+          list_jump_locations(reg, &msa->num_cache_opcodes);
 	  OnigPosition r = count_num_cache_opcodes(reg, &msa->num_cache_opcodes);
 	  if (r < 0) goto bytecode_error;
 	}
