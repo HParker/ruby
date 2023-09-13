@@ -2583,6 +2583,7 @@ rb_threadptr_root_fiber_release(rb_thread_t *th)
         VM_ASSERT(th->ec->fiber_ptr->cont.type == FIBER_CONTEXT);
         VM_ASSERT(th->ec->fiber_ptr->cont.self == 0);
 
+        ruby_xfree(th->ec->vm_stack);
         if (th->ec == ec) {
             rb_ractor_set_current_ec(th->ractor, NULL);
         }
