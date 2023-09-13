@@ -45,6 +45,7 @@
 #define OPT_CHECKED_RUN              1
 #define OPT_INLINE_METHOD_CACHE      1
 #define OPT_GLOBAL_METHOD_CACHE      1
+#define OPT_FREE_ON_SHUTDOWN         1
 
 #ifndef OPT_IC_FOR_IVAR
 #define OPT_IC_FOR_IVAR 1
