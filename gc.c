@@ -4487,9 +4487,13 @@ rb_objspace_call_finalizer(rb_objspace_t *objspace)
                     make_io_zombie(objspace, vp);
                 }
                 break;
+              case T_NONE:
+                break;
               default:
+                obj_free(objspace, vp);
                 break;
             }
+
             if (poisoned) {
                 GC_ASSERT(BUILTIN_TYPE(vp) == T_NONE);
                 asan_poison_object(vp);
