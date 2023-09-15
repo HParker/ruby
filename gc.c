@@ -1881,12 +1881,14 @@ rb_objspace_free(rb_objspace_t *objspace)
             xfree(list);
         }
     }
+
     if (heap_pages_sorted) {
         size_t i;
         size_t total_heap_pages = heap_allocated_pages;
         for (i = 0; i < total_heap_pages; ++i) {
             heap_page_free(objspace, heap_pages_sorted[i]);
         }
+
         free(heap_pages_sorted);
         heap_allocated_pages = 0;
         heap_pages_sorted_length = 0;
@@ -4425,7 +4427,6 @@ void
 rb_objspace_call_finalizer(rb_objspace_t *objspace)
 {
     size_t i;
-
 #if RGENGC_CHECK_MODE >= 2
     gc_verify_internal_consistency(objspace);
 #endif

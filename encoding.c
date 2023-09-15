@@ -71,6 +71,11 @@ static struct enc_table {
     st_table *names;
 } global_enc_table;
 
+void
+global_enc_table_destroy(void) {
+    st_free_table(global_enc_table.names);
+}
+
 static rb_encoding *global_enc_ascii,
                    *global_enc_utf_8,
                    *global_enc_us_ascii;

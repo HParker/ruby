@@ -31,6 +31,7 @@
 #include "iseq.h"
 #include "rjit.h"
 #include "yjit.h"
+#include "symbol.h"
 #include "ruby/st.h"
 #include "ruby/vm.h"
 #include "vm_core.h"
@@ -2894,6 +2895,10 @@ free_loading_table_entry(st_data_t key, st_data_t value, st_data_t arg)
     return ST_DELETE;
 }
 
+extern rb_symbols_t ruby_global_symbols;
+
+void global_enc_table_destroy(void);
+
 int
 ruby_vm_destruct(rb_vm_t *vm)
 {
@@ -2919,15 +2924,24 @@ ruby_vm_destruct(rb_vm_t *vm)
             st_free_table(vm->frozen_strings);
             vm->frozen_strings = 0;
         }
+
+        // TODO: this didn't work yet... try again later.
+        // TODO: lock around this.
+        // st_free_table(ruby_global_symbols.str_sym);
+
+        /* ruby_xfree(vm->postponed_job_buffer); */
+        /* st_free_table(vm->defined_module_hash); */
+        // global_enc_table_destroy();
+
         RB_ALTSTACK_FREE(vm->main_altstack);
         if (objspace) {
             rb_objspace_free(objspace);
         }
         rb_native_mutex_destroy(&vm->workqueue_lock);
+
         /* after freeing objspace, you *can't* use ruby_xfree() */
         ruby_mimfree(vm);
         ruby_current_vm_ptr = NULL;
-        ruby_xfree(vm->postponed_job_buffer);
     }
     RUBY_FREE_LEAVE("vm");
     return 0;
