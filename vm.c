@@ -2927,6 +2927,7 @@ ruby_vm_destruct(rb_vm_t *vm)
         /* after freeing objspace, you *can't* use ruby_xfree() */
         ruby_mimfree(vm);
         ruby_current_vm_ptr = NULL;
+        ruby_xfree(vm->postponed_job_buffer);
     }
     RUBY_FREE_LEAVE("vm");
     return 0;
