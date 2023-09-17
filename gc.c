@@ -3683,6 +3683,7 @@ obj_free(rb_objspace_t *objspace, VALUE obj)
             RB_DEBUG_COUNTER_INC(obj_imemo_parser_strterm);
             break;
           case imemo_callinfo:
+            ruby_xfree((void *)RANY(obj)->as.basic.klass);
             RB_DEBUG_COUNTER_INC(obj_imemo_callinfo);
             break;
           case imemo_callcache:

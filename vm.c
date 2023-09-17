@@ -1979,6 +1979,13 @@ short ruby_vm_redefined_flag[BOP_LAST_];
 static st_table *vm_opt_method_def_table = 0;
 static st_table *vm_opt_mid_table = 0;
 
+void
+free_vm_opt_tables(void)
+{
+    st_free_table(vm_opt_method_def_table);
+    st_free_table(vm_opt_method_def_table);
+}
+
 static int
 vm_redefinition_check_flag(VALUE klass)
 {
@@ -2899,6 +2906,7 @@ void free_static_symid_str(void);
 void free_syserr_tbl(void);
 void free_encoded_insn_data(void);
 void free_environ(void);
+void free_vm_opt_tables(void);
 
 int
 ruby_vm_destruct(rb_vm_t *vm)
@@ -2937,6 +2945,7 @@ ruby_vm_destruct(rb_vm_t *vm)
         free_syserr_tbl();
         free_encoded_insn_data();
         free_environ();
+        free_vm_opt_tables();
 
         RB_ALTSTACK_FREE(vm->main_altstack);
         if (objspace) {
