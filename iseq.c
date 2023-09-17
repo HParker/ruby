@@ -3414,6 +3414,12 @@ rb_vm_encoded_insn_data_table_init(void)
     }
 }
 
+void
+free_encoded_insn_data(void)
+{
+    st_free_table(encoded_insn_data);
+}
+
 int
 rb_vm_insn_addr2insn(const void *addr)
 {

@@ -2726,6 +2726,12 @@ set_syserr(int n, const char *name)
     return error;
 }
 
+void
+free_syserr_tbl(void)
+{
+    st_free_table(syserr_tbl);
+}
+
 static VALUE
 get_syserr(int n)
 {

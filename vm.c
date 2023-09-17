@@ -31,7 +31,6 @@
 #include "iseq.h"
 #include "rjit.h"
 #include "yjit.h"
-#include "symbol.h"
 #include "ruby/st.h"
 #include "ruby/vm.h"
 #include "vm_core.h"
@@ -2895,9 +2894,11 @@ free_loading_table_entry(st_data_t key, st_data_t value, st_data_t arg)
     return ST_DELETE;
 }
 
-extern rb_symbols_t ruby_global_symbols;
-
 void global_enc_table_destroy(void);
+void free_static_symid_str(void);
+void free_syserr_tbl(void);
+void free_encoded_insn_data(void);
+void free_environ(void);
 
 int
 ruby_vm_destruct(rb_vm_t *vm)
@@ -2925,13 +2926,17 @@ ruby_vm_destruct(rb_vm_t *vm)
             vm->frozen_strings = 0;
         }
 
+        free_static_symid_str();
         // TODO: this didn't work yet... try again later.
         // TODO: lock around this.
         // st_free_table(ruby_global_symbols.str_sym);
 
-        /* ruby_xfree(vm->postponed_job_buffer); */
-        /* st_free_table(vm->defined_module_hash); */
-        // global_enc_table_destroy();
+        ruby_xfree(vm->postponed_job_buffer);
+        st_free_table(vm->defined_module_hash);
+        global_enc_table_destroy();
+        free_syserr_tbl();
+        free_encoded_insn_data();
+        free_environ();
 
         RB_ALTSTACK_FREE(vm->main_altstack);
         if (objspace) {

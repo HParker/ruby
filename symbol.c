@@ -570,6 +570,16 @@ register_static_symid_str(ID id, VALUE str)
     return id;
 }
 
+void
+free_static_symid_str(void)
+{
+    GLOBAL_SYMBOLS_ENTER(symbols)
+        {
+            st_free_table(symbols->str_sym);
+        }
+    GLOBAL_SYMBOLS_LEAVE();
+}
+
 static int
 sym_check_asciionly(VALUE str)
 {
