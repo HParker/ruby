@@ -46,6 +46,15 @@ RUBY_EXTERN rb_serial_t ruby_vm_global_cvar_state;
 typedef void rb_gvar_compact_t(void *var);
 
 static struct rb_id_table *rb_global_tbl;
+
+
+
+void
+free_rb_global_tbl(void)
+{
+    rb_id_table_free(rb_global_tbl);
+}
+
 static ID autoload;
 
 // This hash table maps file paths to loadable features. We use this to track

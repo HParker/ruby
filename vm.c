@@ -2907,6 +2907,7 @@ void free_syserr_tbl(void);
 void free_encoded_insn_data(void);
 void free_environ(void);
 void free_vm_opt_tables(void);
+void free_rb_global_tbl(void);
 
 int
 ruby_vm_destruct(rb_vm_t *vm)
@@ -2946,6 +2947,7 @@ ruby_vm_destruct(rb_vm_t *vm)
         free_encoded_insn_data();
         free_environ();
         free_vm_opt_tables();
+        free_rb_global_tbl();
 
         RB_ALTSTACK_FREE(vm->main_altstack);
         if (objspace) {
