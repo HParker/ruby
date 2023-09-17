@@ -1982,8 +1982,9 @@ static st_table *vm_opt_mid_table = 0;
 void
 free_vm_opt_tables(void)
 {
+    // Address 0x4e23840 is 0 bytes inside a block of size 1,536 free'd
     st_free_table(vm_opt_method_def_table);
-    st_free_table(vm_opt_method_def_table);
+    st_free_table(vm_opt_mid_table);
 }
 
 static int
@@ -2901,13 +2902,15 @@ free_loading_table_entry(st_data_t key, st_data_t value, st_data_t arg)
     return ST_DELETE;
 }
 
-void global_enc_table_destroy(void);
+void free_global_enc_table(void);
 void free_static_symid_str(void);
 void free_syserr_tbl(void);
 void free_encoded_insn_data(void);
 void free_environ(void);
 void free_vm_opt_tables(void);
 void free_rb_global_tbl(void);
+void free_loaded_builtin_table(void);
+void free_warning_categories(void);
 
 int
 ruby_vm_destruct(rb_vm_t *vm)
@@ -2940,20 +2943,40 @@ ruby_vm_destruct(rb_vm_t *vm)
         // TODO: lock around this.
         // st_free_table(ruby_global_symbols.str_sym);
 
-        ruby_xfree(vm->postponed_job_buffer);
-        st_free_table(vm->defined_module_hash);
-        global_enc_table_destroy();
+
+        free_global_enc_table();
         free_syserr_tbl();
         free_encoded_insn_data();
         free_environ();
         free_vm_opt_tables();
         free_rb_global_tbl();
+#ifndef INCLUDED_BY_BUILTIN_C
+        free_loaded_builtin_table();
+#endif
+        free_warning_categories();
+
+        rb_id_table_free(vm->negative_cme_table);
+        st_free_table(vm->overloaded_cme_table);
+
+        st_free_table(vm->loaded_features_index);
+        /* st_free_table(vm->loading_table); */
+
+        st_free_table(vm->static_ext_inits);
+        st_free_table(vm->ensure_rollback_table);
+
+        ruby_xfree(vm->postponed_job_buffer);
+        st_free_table(vm->defined_module_hash);
+
+        rb_id_table_free(vm->constant_cache);
+
+        ruby_xfree(vm->ractor.main_ractor);
 
         RB_ALTSTACK_FREE(vm->main_altstack);
         if (objspace) {
             rb_objspace_free(objspace);
         }
         rb_native_mutex_destroy(&vm->workqueue_lock);
+
 
         /* after freeing objspace, you *can't* use ruby_xfree() */
         ruby_mimfree(vm);

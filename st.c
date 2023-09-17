@@ -658,6 +658,17 @@ void
 st_free_table(st_table *tab)
 {
     free(tab->bins);
+
+    /* st_index_t bound = tab->entries_bound; */
+    /* st_table_entry *entries = tab->entries; */
+    /* st_table_entry *curr_entry_ptr; */
+    /* size_t i; */
+    
+    /* for (i = tab->entries_start; i < bound; i++) { */
+    /*     curr_entry_ptr = &entries[i]; */
+    /*     ruby_xfree(curr_entry_ptr->key); */
+    /* } */
+    
     free(tab->entries);
     free(tab);
 }

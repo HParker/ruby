@@ -72,7 +72,13 @@ static struct enc_table {
 } global_enc_table;
 
 void
-global_enc_table_destroy(void) {
+free_global_enc_table(void) {
+    for (size_t i = 0; i < ENCODING_LIST_CAPA; i++) {
+        ruby_xfree(global_enc_table.list[i].name);
+        ruby_xfree(global_enc_table.list[i].enc);
+        ruby_xfree(global_enc_table.list[i].base);
+    }
+
     st_free_table(global_enc_table.names);
 }
 

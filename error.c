@@ -90,6 +90,13 @@ static struct {
     st_table *id2enum, *enum2id;
 } warning_categories;
 
+void
+free_warning_categories(void)
+{
+    st_free_table(warning_categories.id2enum);
+    st_free_table(warning_categories.enum2id);
+}
+
 extern const char *rb_dynamic_description;
 
 static const char *
