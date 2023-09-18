@@ -2939,15 +2939,11 @@ ruby_vm_destruct(rb_vm_t *vm)
         }
 
         free_static_symid_str();
-        // TODO: this didn't work yet... try again later.
-        // TODO: lock around this.
-        // st_free_table(ruby_global_symbols.str_sym);
-
 
         free_global_enc_table();
         free_syserr_tbl();
         free_encoded_insn_data();
-        free_environ();
+        free_environ(); // TODO: should this free later? it breaks segfault reporting
         free_vm_opt_tables();
         free_rb_global_tbl();
 #ifndef INCLUDED_BY_BUILTIN_C
@@ -2960,6 +2956,15 @@ ruby_vm_destruct(rb_vm_t *vm)
 
         st_free_table(vm->loaded_features_index);
         /* st_free_table(vm->loading_table); */
+
+        rb_shape_t *cursor = rb_shape_get_root_shape();
+        rb_shape_t *end = rb_shape_get_shape_by_id(GET_SHAPE_TREE()->next_shape_id);
+        while (cursor < end) {
+            // TODO 0x1 == SINGLE_CHILD_P
+            if (cursor->edges && !(((uintptr_t)cursor->edges) & 0x1))
+                rb_id_table_free(cursor->edges);
+            cursor += 1;
+        }
 
         st_free_table(vm->static_ext_inits);
         st_free_table(vm->ensure_rollback_table);
@@ -2976,7 +2981,6 @@ ruby_vm_destruct(rb_vm_t *vm)
             rb_objspace_free(objspace);
         }
         rb_native_mutex_destroy(&vm->workqueue_lock);
-
 
         /* after freeing objspace, you *can't* use ruby_xfree() */
         ruby_mimfree(vm);
