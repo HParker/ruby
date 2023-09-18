@@ -2911,6 +2911,10 @@ void free_vm_opt_tables(void);
 void free_rb_global_tbl(void);
 void free_loaded_builtin_table(void);
 void free_warning_categories(void);
+void free_transcoder_table(void);
+void free_generic_iv_tbl_(void);
+
+void rb_objspace_free_objects(void *objspace);
 
 int
 ruby_vm_destruct(rb_vm_t *vm)
@@ -2950,17 +2954,18 @@ ruby_vm_destruct(rb_vm_t *vm)
         free_loaded_builtin_table();
 #endif
         free_warning_categories();
+        free_transcoder_table();
+        free_generic_iv_tbl_();
 
         rb_id_table_free(vm->negative_cme_table);
         st_free_table(vm->overloaded_cme_table);
 
         st_free_table(vm->loaded_features_index);
-        /* st_free_table(vm->loading_table); */
 
         rb_shape_t *cursor = rb_shape_get_root_shape();
         rb_shape_t *end = rb_shape_get_shape_by_id(GET_SHAPE_TREE()->next_shape_id);
         while (cursor < end) {
-            // TODO 0x1 == SINGLE_CHILD_P
+            // TODO: 0x1 == SINGLE_CHILD_P
             if (cursor->edges && !(((uintptr_t)cursor->edges) & 0x1))
                 rb_id_table_free(cursor->edges);
             cursor += 1;
@@ -2978,6 +2983,8 @@ ruby_vm_destruct(rb_vm_t *vm)
 
         RB_ALTSTACK_FREE(vm->main_altstack);
         if (objspace) {
+            // this only frees T_ARRAY not cleaned up durring finalizers
+            rb_objspace_free_objects(objspace);
             rb_objspace_free(objspace);
         }
         rb_native_mutex_destroy(&vm->workqueue_lock);
