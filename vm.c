@@ -2913,6 +2913,8 @@ void free_loaded_builtin_table(void);
 void free_warning_categories(void);
 void free_transcoder_table(void);
 void free_generic_iv_tbl_(void);
+void free_default_rand_key(void);
+void free_shared_fiber_pool(void);
 
 void rb_objspace_free_objects(void *objspace);
 
@@ -2947,7 +2949,6 @@ ruby_vm_destruct(rb_vm_t *vm)
         }
 
         free_static_symid_str();
-
         free_global_enc_table();
         free_syserr_tbl();
         free_encoded_insn_data();
@@ -2960,7 +2961,9 @@ ruby_vm_destruct(rb_vm_t *vm)
         free_warning_categories();
         free_transcoder_table();
         free_generic_iv_tbl_();
-
+        free_default_rand_key();
+        free_shared_fiber_pool();
+        
         rb_id_table_free(vm->negative_cme_table);
         st_free_table(vm->overloaded_cme_table);
 
@@ -2975,6 +2978,8 @@ ruby_vm_destruct(rb_vm_t *vm)
             cursor += 1;
         }
 
+        xfree(GET_SHAPE_TREE());
+        
         st_free_table(vm->static_ext_inits);
         st_free_table(vm->ensure_rollback_table);
 

@@ -2511,9 +2511,17 @@ Init_marshal(void)
     rb_define_const(rb_mMarshal, "MINOR_VERSION", INT2FIX(MARSHAL_MINOR));
 }
 
+static int
+free_compat_i(st_data_t key, st_data_t value, st_data_t _)
+{
+    xfree((marshal_compat_t *)value);
+    return ST_CONTINUE;
+}
+
 void
 free_compat_allocator_table(void *data)
 {
+    st_foreach(data, free_compat_i, 0);
     st_free_table(data);
 }
 
