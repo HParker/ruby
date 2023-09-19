@@ -4440,6 +4440,12 @@ rb_objspace_free_objects(rb_objspace_t *objspace)
         for (; p < pend; p += stride) {
             VALUE vp = (VALUE)p;
             switch (BUILTIN_TYPE(vp)) {
+            case T_DATA: {
+                if (rb_obj_is_mutex(vp)) {
+                    obj_free(objspace, vp);
+                }
+                break;
+            }
             case T_ARRAY:
                 obj_free(objspace, vp);
                 break;
