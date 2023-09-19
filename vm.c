@@ -2922,8 +2922,12 @@ ruby_vm_destruct(rb_vm_t *vm)
     RUBY_FREE_ENTER("vm");
 
     if (vm) {
+        rb_ractor_t *r = vm->ractor.main_ractor;
         rb_thread_t *th = vm->ractor.main_thread;
         struct rb_objspace *objspace = vm->objspace;
+
+        xfree(r->sync.recv_queue.baskets);
+        xfree(r->sync.takers_queue.baskets);
         vm->ractor.main_thread = NULL;
 
         if (th) {

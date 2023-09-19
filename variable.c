@@ -460,7 +460,7 @@ free_global_entry_i(ID key, VALUE val, void *a)
     if (((struct rb_global_entry *)val)->var->counter == 1) {
         ruby_xfree(((struct rb_global_entry *)val)->var);
     } else {
-        /* ((struct rb_global_entry *)val)->var->counter--; */
+        ((struct rb_global_entry *)val)->var->counter--;
     }
     ruby_xfree((struct rb_global_entry *)val);
     return ST_DELETE;
