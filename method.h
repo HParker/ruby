@@ -193,6 +193,7 @@ struct rb_method_definition_struct {
         rb_method_optimized_t optimized;
     } body;
 
+    int reference_count;
     ID original_id;
     uintptr_t method_serial;
 };
