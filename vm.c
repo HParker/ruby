@@ -2969,6 +2969,8 @@ ruby_vm_destruct(rb_vm_t *vm)
 
         st_free_table(vm->loaded_features_index);
 
+        rb_id_table_free(RCLASS(rb_mRubyVMFrozenCore)->m_tbl);
+        
         rb_shape_t *cursor = rb_shape_get_root_shape();
         rb_shape_t *end = rb_shape_get_shape_by_id(GET_SHAPE_TREE()->next_shape_id);
         while (cursor < end) {

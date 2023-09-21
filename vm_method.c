@@ -6,7 +6,7 @@
 #include "yjit.h"
 #include "rjit.h"
 
-#define METHOD_DEBUG 1
+#define METHOD_DEBUG 0
 
 static int vm_redefinition_check_flag(VALUE klass);
 static void rb_vm_check_redefinition_opt_method(const rb_method_entry_t *me, VALUE klass);
