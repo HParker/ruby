@@ -6,7 +6,7 @@
 #include "yjit.h"
 #include "rjit.h"
 
-#define METHOD_DEBUG 0
+#define METHOD_DEBUG 1
 
 static int vm_redefinition_check_flag(VALUE klass);
 static void rb_vm_check_redefinition_opt_method(const rb_method_entry_t *me, VALUE klass);
@@ -636,18 +636,21 @@ rb_method_definition_create(rb_method_type_t type, ID mid)
 {
     rb_method_definition_t *def;
     def = ZALLOC(rb_method_definition_t);
-    def->reference_count = 1;
     def->type = type;
     def->original_id = mid;
     static uintptr_t method_serial = 1;
     def->method_serial = method_serial++;
+    if (METHOD_DEBUG) fprintf(stderr, "-%p-%s:%d (add)\n", (void *)def,
+                              rb_id2name(def->original_id), def->reference_count);
     return def;
 }
 
 static rb_method_entry_t *
 rb_method_entry_alloc(ID called_id, VALUE owner, VALUE defined_class, rb_method_definition_t *def, bool complement)
 {
-    if (def) method_definition_addref(def, complement);
+    if (def) {
+        method_definition_addref(def, complement);
+    }
     rb_method_entry_t *me = (rb_method_entry_t *)rb_imemo_new(imemo_ment, (VALUE)def, (VALUE)called_id, owner, defined_class);
     return me;
 }
