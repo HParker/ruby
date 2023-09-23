@@ -6178,11 +6178,6 @@ compile_case(rb_iseq_t *iseq, LINK_ANCHOR *const ret, const NODE *const orig_nod
     ADD_SEQ(ret, body_seq);
     ADD_LABEL(ret, endlabel);
 
-    st_table *tab = RHASH_ST_TABLE(literals);
-
-    free(tab->bins);
-    free(tab->entries);
-
     return COMPILE_OK;
 }
 
