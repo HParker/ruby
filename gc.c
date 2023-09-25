@@ -4446,6 +4446,7 @@ rb_objspace_free_objects(rb_objspace_t *objspace)
                 }
                 break;
             }
+            // case T_SYMBOL:
             case T_ARRAY:
                 obj_free(objspace, vp);
                 break;
@@ -4528,6 +4529,7 @@ rb_objspace_call_finalizer(rb_objspace_t *objspace)
                     make_io_zombie(objspace, vp);
                 }
                 break;
+              case T_SYMBOL:
               case T_ARRAY:
               case T_NONE:
                 break;

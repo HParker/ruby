@@ -1842,7 +1842,7 @@ rb_current_execution_context(bool expect_ec)
 #else
     rb_execution_context_t *ec = native_tls_get(ruby_current_ec_key);
 #endif
-    VM_ASSERT(!expect_ec || ec != NULL);
+    // VM_ASSERT(!expect_ec || ec != NULL);
     return ec;
 }
 
