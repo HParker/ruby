@@ -2951,18 +2951,18 @@ ruby_vm_destruct(rb_vm_t *vm)
         }
 
         free_static_symid_str();
-        free_global_enc_table(); // double free in ./ruby
+        free_global_enc_table();
         free_syserr_tbl();
         free_encoded_insn_data();
-        free_environ(); // TODO: should this free later? it breaks segfault reporting, also: doesn't work in ./ruby only miniruby
+        free_environ(); // TODO: should this free later? it breaks segfault reporting
         free_vm_opt_tables();
         free_rb_global_tbl();
 #ifndef INCLUDED_BY_BUILTIN_C
-        // free_loaded_builtin_table();
+        // free_loaded_builtin_table(); // does not work for ./ruby only ./miniruby
 #endif
         free_warning_categories();
         free_transcoder_table();
-        free_generic_iv_tbl_(); // read after free on ./ruby
+        free_generic_iv_tbl_();
         free_default_rand_key();
         free_shared_fiber_pool();
         
