@@ -81,8 +81,8 @@ enc_names_free_i(st_data_t name, st_data_t idx, st_data_t args)
 void
 free_global_enc_table(void) {
     for (size_t i = 0; i < ENCODING_LIST_CAPA; i++) {
-        ruby_xfree(global_enc_table.list[i].enc);
-        ruby_xfree(global_enc_table.list[i].base);
+        // ruby_xfree(global_enc_table.list[i].enc);
+        // ruby_xfree(global_enc_table.list[i].base); // Base is just another encoding, so enc should free it.
     }
 
     st_foreach(global_enc_table.names, enc_names_free_i, (st_data_t)0);

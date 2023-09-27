@@ -2910,7 +2910,7 @@ void free_environ(void);
 void free_vm_opt_tables(void);
 void free_rb_global_tbl(void);
 #ifndef INCLUDED_BY_BUILTIN_C
-// void free_loaded_builtin_table(void);
+void free_loaded_builtin_table(void);
 #endif
 void free_warning_categories(void);
 void free_transcoder_table(void);

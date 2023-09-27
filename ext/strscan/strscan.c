@@ -541,7 +541,7 @@ adjust_register_position(struct strscanner *p, long position)
 
 /* rb_reg_onig_match is available in Ruby 3.3 and later. */
 #ifndef HAVE_RB_REG_ONIG_MATCH
-static OnigPosition
+OnigPosition
 rb_reg_onig_match(VALUE re, VALUE str,
                   OnigPosition (*match)(regex_t *reg, VALUE str, struct re_registers *regs, void *args),
                   void *args, struct re_registers *regs)

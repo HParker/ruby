@@ -123,7 +123,7 @@ char *BigDecimal_dtoa(double d_, int mode, int ndigits, int *decpt, int *sign, c
 /* rational */
 
 #ifndef HAVE_RB_RATIONAL_NUM
-static inline VALUE
+inline VALUE
 rb_rational_num(VALUE rat)
 {
 #ifdef RRATIONAL
@@ -135,7 +135,7 @@ rb_rational_num(VALUE rat)
 #endif
 
 #ifndef HAVE_RB_RATIONAL_DEN
-static inline VALUE
+inline VALUE
 rb_rational_den(VALUE rat)
 {
 #ifdef RRATIONAL
@@ -149,7 +149,7 @@ rb_rational_den(VALUE rat)
 /* complex */
 
 #ifndef HAVE_RB_COMPLEX_REAL
-static inline VALUE
+inline VALUE
 rb_complex_real(VALUE cmp)
 {
 #ifdef RCOMPLEX
@@ -161,7 +161,7 @@ rb_complex_real(VALUE cmp)
 #endif
 
 #ifndef HAVE_RB_COMPLEX_IMAG
-static inline VALUE
+inline VALUE
 rb_complex_imag(VALUE cmp)
 {
 # ifdef RCOMPLEX

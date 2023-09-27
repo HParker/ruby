@@ -1420,7 +1420,7 @@ io_open_descriptor_fallback(VALUE klass, int descriptor, int mode, VALUE path, V
 #endif
 
 #ifndef HAVE_RB_IO_CLOSED_P
-static VALUE
+VALUE
 rb_io_closed_p(VALUE io)
 {
     rb_io_t *fptr = RFILE(io)->fptr;
