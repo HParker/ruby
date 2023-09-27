@@ -14,7 +14,8 @@ static struct st_table *loaded_builtin_table;
 void
 free_loaded_builtin_table(void)
 {
-    st_free_table(loaded_builtin_table);
+    if (loaded_builtin_table)
+        st_free_table(loaded_builtin_table);
 }
 #endif
 

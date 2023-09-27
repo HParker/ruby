@@ -2958,14 +2958,14 @@ ruby_vm_destruct(rb_vm_t *vm)
         free_vm_opt_tables();
         free_rb_global_tbl();
 #ifndef INCLUDED_BY_BUILTIN_C
-        // free_loaded_builtin_table(); // does not work for ./ruby only ./miniruby
+        // free_loaded_builtin_table();
 #endif
         free_warning_categories();
         free_transcoder_table();
-        free_generic_iv_tbl_();
+        // free_generic_iv_tbl_(); // must free later, can be referenced via obj_free. raises on make install
         free_default_rand_key();
         free_shared_fiber_pool();
-        
+
         rb_id_table_free(vm->negative_cme_table);
         st_free_table(vm->overloaded_cme_table);
 
