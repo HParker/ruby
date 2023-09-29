@@ -4646,11 +4646,17 @@ vm_search_super_method(const rb_control_frame_t *reg_cfp, struct rb_call_data *c
 
     ID mid = me->def->original_id;
 
+    struct rb_callinfo_kwarg *kw_arg = NULL;
+    if (vm_ci_kwarg(cd->ci)) {
+        kw_arg = rb_xmalloc_mul_add(vm_ci_kwarg(cd->ci)->keyword_len, sizeof(VALUE), sizeof(struct rb_callinfo_kwarg));
+        memcpy(kw_arg, vm_ci_kwarg(cd->ci), vm_ci_kwarg(cd->ci)->keyword_len * sizeof(VALUE) + sizeof(struct rb_callinfo_kwarg));
+    }
+
     // update iseq. really? (TODO)
     cd->ci = vm_ci_new_runtime(mid,
                                vm_ci_flag(cd->ci),
                                vm_ci_argc(cd->ci),
-                               vm_ci_kwarg(cd->ci));
+                               kw_arg);
 
     RB_OBJ_WRITTEN(reg_cfp->iseq, Qundef, cd->ci);
 

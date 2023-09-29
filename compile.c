@@ -3044,10 +3044,15 @@ optimize_checktype(rb_iseq_t *iseq, INSN *iobj)
 static const struct rb_callinfo *
 ci_flag_set(const rb_iseq_t *iseq, const struct rb_callinfo *ci, unsigned int add)
 {
+    struct rb_callinfo_kwarg *kw_arg = NULL;
+    if (vm_ci_kwarg(ci)) {
+        kw_arg = rb_xmalloc_mul_add(vm_ci_kwarg(ci)->keyword_len, sizeof(VALUE), sizeof(struct rb_callinfo_kwarg));
+        memcpy(kw_arg, vm_ci_kwarg(ci), vm_ci_kwarg(ci)->keyword_len * sizeof(VALUE) + sizeof(struct rb_callinfo_kwarg));
+    }
     const struct rb_callinfo *nci = vm_ci_new(vm_ci_mid(ci),
                                              vm_ci_flag(ci) | add,
                                              vm_ci_argc(ci),
-                                             vm_ci_kwarg(ci));
+                                             kw_arg);
     RB_OBJ_WRITTEN(iseq, ci, nci);
     return nci;
 }
@@ -3055,10 +3060,15 @@ ci_flag_set(const rb_iseq_t *iseq, const struct rb_callinfo *ci, unsigned int ad
 static const struct rb_callinfo *
 ci_argc_set(const rb_iseq_t *iseq, const struct rb_callinfo *ci, int argc)
 {
+    struct rb_callinfo_kwarg *kw_arg = NULL;
+    if (vm_ci_kwarg(ci)) {
+        kw_arg = rb_xmalloc_mul_add(vm_ci_kwarg(ci)->keyword_len, sizeof(VALUE), sizeof(struct rb_callinfo_kwarg));
+        memcpy(kw_arg, vm_ci_kwarg(ci), vm_ci_kwarg(ci)->keyword_len * sizeof(VALUE) + sizeof(struct rb_callinfo_kwarg));
+    }
     const struct rb_callinfo *nci = vm_ci_new(vm_ci_mid(ci),
                                               vm_ci_flag(ci),
                                               argc,
-                                              vm_ci_kwarg(ci));
+                                              kw_arg);
     RB_OBJ_WRITTEN(iseq, ci, nci);
     return nci;
 }
@@ -8532,6 +8542,8 @@ compile_call(rb_iseq_t *iseq, LINK_ANCHOR *const ret, const NODE *const node, co
         }
     }
 
+    struct rb_callinfo_kwarg *prev_keywords = keywords;
+
     /* args */
     if (type != NODE_VCALL) {
         argc = setup_args(iseq, args, node->nd_args, &flag, &keywords);
@@ -8539,6 +8551,13 @@ compile_call(rb_iseq_t *iseq, LINK_ANCHOR *const ret, const NODE *const node, co
     }
     else {
         argc = INT2FIX(0);
+    }
+
+    if (keywords && prev_keywords == keywords) {
+        struct rb_callinfo_kwarg *kw_arg =
+                rb_xmalloc_mul_add(keywords->keyword_len, sizeof(VALUE), sizeof(struct rb_callinfo_kwarg));
+                memcpy(kw_arg, keywords, keywords->keyword_len * sizeof(VALUE) + sizeof(struct rb_callinfo_kwarg));
+        keywords = kw_arg;
     }
 
     ADD_SEQ(ret, recv);
@@ -8948,6 +8967,8 @@ compile_super(rb_iseq_t *iseq, LINK_ANCHOR *const ret, const NODE *const node, i
     struct rb_callinfo_kwarg *keywords = NULL;
     const rb_iseq_t *parent_block = ISEQ_COMPILE_DATA(iseq)->current_block;
 
+    struct rb_callinfo_kwarg *prev_keywords = keywords;
+
     INIT_ANCHOR(args);
     ISEQ_COMPILE_DATA(iseq)->current_block = NULL;
     if (type == NODE_SUPER) {
@@ -9050,6 +9071,13 @@ compile_super(rb_iseq_t *iseq, LINK_ANCHOR *const ret, const NODE *const node, i
         }
     }
 
+    if (keywords && prev_keywords == keywords) {
+        struct rb_callinfo_kwarg *kw_arg =
+                rb_xmalloc_mul_add(keywords->keyword_len, sizeof(VALUE), sizeof(struct rb_callinfo_kwarg));
+                memcpy(kw_arg, keywords, keywords->keyword_len * sizeof(VALUE) + sizeof(struct rb_callinfo_kwarg));
+        keywords = kw_arg;
+    }
+
     flag |= VM_CALL_SUPER | VM_CALL_FCALL;
     if (type == NODE_ZSUPER) flag |= VM_CALL_ZSUPER;
     ADD_INSN(ret, node, putself);
@@ -9083,12 +9111,21 @@ compile_yield(rb_iseq_t *iseq, LINK_ANCHOR *const ret, const NODE *const node, i
       default: /* valid */;
     }
 
+    struct rb_callinfo_kwarg *prev_keywords = keywords;
+
     if (node->nd_head) {
         argc = setup_args(iseq, args, node->nd_head, &flag, &keywords);
         CHECK(!NIL_P(argc));
     }
     else {
         argc = INT2FIX(0);
+    }
+
+    if (keywords && prev_keywords == keywords) {
+        struct rb_callinfo_kwarg *kw_arg =
+                rb_xmalloc_mul_add(keywords->keyword_len, sizeof(VALUE), sizeof(struct rb_callinfo_kwarg));
+                memcpy(kw_arg, keywords, keywords->keyword_len * sizeof(VALUE) + sizeof(struct rb_callinfo_kwarg));
+        keywords = kw_arg;
     }
 
     ADD_SEQ(ret, args);

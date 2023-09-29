@@ -2950,13 +2950,13 @@ ruby_vm_destruct(rb_vm_t *vm)
             vm->frozen_strings = 0;
         }
 
-        free_static_symid_str();
+        // free_static_symid_str();
         free_global_enc_table();
         free_syserr_tbl();
         free_encoded_insn_data();
         free_environ(); // TODO: should this free later? it breaks segfault reporting
         free_vm_opt_tables();
-        free_rb_global_tbl();
+        // free_rb_global_tbl();
 #ifndef INCLUDED_BY_BUILTIN_C
         // free_loaded_builtin_table();
 #endif
