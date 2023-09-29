@@ -43,6 +43,7 @@ enum vm_call_flag_bits {
 
 struct rb_callinfo_kwarg {
     int keyword_len;
+    int references; // TODO: reference count shared kwargs usage.
     VALUE keywords[];
 };
 
@@ -197,7 +198,7 @@ vm_ci_dump(const struct rb_callinfo *ci)
       RUBY_FIXNUM_FLAG))
 
 static inline const struct rb_callinfo *
-vm_ci_new_(ID mid, unsigned int flag, unsigned int argc, const struct rb_callinfo_kwarg *kwarg, const char *file, int line)
+vm_ci_new_(ID mid, unsigned int flag, unsigned int argc, const struct rb_callinfo_kwarg *kwarg, const char *file, int line) // TODO: change to take "I own this kwarg" argument
 {
     if (USE_EMBED_CI && VM_CI_EMBEDDABLE_P(mid, flag, argc, kwarg)) {
         RB_DEBUG_COUNTER_INC(ci_packed);
@@ -206,6 +207,11 @@ vm_ci_new_(ID mid, unsigned int flag, unsigned int argc, const struct rb_callinf
 
     const bool debug = 0;
     if (debug) ruby_debug_printf("%s:%d ", file, line);
+
+    // if (!i_own)
+    // {
+    //     dup(kwarg); /sudocode
+    // }
 
     // TODO: dedup
     const struct rb_callinfo *ci = (const struct rb_callinfo *)

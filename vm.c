@@ -2954,7 +2954,7 @@ ruby_vm_destruct(rb_vm_t *vm)
         free_global_enc_table();
         free_syserr_tbl();
         free_encoded_insn_data();
-        free_environ(); // TODO: should this free later? it breaks segfault reporting
+        // free_environ(); // TODO: should this free later? it breaks segfault reporting ALSO FREED in ./ruby via exit.c
         free_vm_opt_tables();
         free_rb_global_tbl();
 #ifndef INCLUDED_BY_BUILTIN_C
@@ -2966,8 +2966,8 @@ ruby_vm_destruct(rb_vm_t *vm)
         free_default_rand_key();
         free_shared_fiber_pool();
 
-        rb_id_table_free(vm->negative_cme_table);
-        st_free_table(vm->overloaded_cme_table);
+        //rb_id_table_free(vm->negative_cme_table); // TODO FREE LATER
+        // st_free_table(vm->overloaded_cme_table); // TODO FREE LATER
 
         st_free_table(vm->loaded_features_index);
 

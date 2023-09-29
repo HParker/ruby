@@ -3044,6 +3044,14 @@ optimize_checktype(rb_iseq_t *iseq, INSN *iobj)
 static const struct rb_callinfo *
 ci_flag_set(const rb_iseq_t *iseq, const struct rb_callinfo *ci, unsigned int add)
 {
+    // struct rb_callinfo_kwarg *kw_arg = NULL;
+    // if (vm_ci_kwarg(ci)) {
+    //     kw_arg = rb_xmalloc_mul_add(vm_ci_kwarg(ci)->keyword_len, sizeof(VALUE), sizeof(struct rb_callinfo_kwarg));
+    //     memcpy(kw_arg, vm_ci_kwarg(ci), vm_ci_kwarg(ci)->keyword_len * sizeof(VALUE) + sizeof(struct rb_callinfo_kwarg));
+    // }
+    if (vm_ci_kwarg(ci))
+        vm_ci_kwarg(ci)->references++;
+
     const struct rb_callinfo *nci = vm_ci_new(vm_ci_mid(ci),
                                              vm_ci_flag(ci) | add,
                                              vm_ci_argc(ci),
@@ -3055,6 +3063,13 @@ ci_flag_set(const rb_iseq_t *iseq, const struct rb_callinfo *ci, unsigned int ad
 static const struct rb_callinfo *
 ci_argc_set(const rb_iseq_t *iseq, const struct rb_callinfo *ci, int argc)
 {
+    // struct rb_callinfo_kwarg *kw_arg = NULL;
+    // if (vm_ci_kwarg(ci)) {
+    //     kw_arg = rb_xmalloc_mul_add(vm_ci_kwarg(ci)->keyword_len, sizeof(VALUE), sizeof(struct rb_callinfo_kwarg));
+    //     memcpy(kw_arg, vm_ci_kwarg(ci), vm_ci_kwarg(ci)->keyword_len * sizeof(VALUE) + sizeof(struct rb_callinfo_kwarg));
+    // }
+    if (vm_ci_kwarg(ci))
+        vm_ci_kwarg(ci)->references++;
     const struct rb_callinfo *nci = vm_ci_new(vm_ci_mid(ci),
                                               vm_ci_flag(ci),
                                               argc,
@@ -4331,7 +4346,7 @@ compile_keyword_arg(rb_iseq_t *iseq, LINK_ANCHOR *const ret,
             VALUE *keywords = kw_arg->keywords;
             int i = 0;
             kw_arg->keyword_len = len;
-
+            kw_arg->references = 0; // owner
             *kw_arg_ptr = kw_arg;
 
             for (i=0; node != NULL; i++, node = node->nd_next->nd_next) {
@@ -4343,6 +4358,9 @@ compile_keyword_arg(rb_iseq_t *iseq, LINK_ANCHOR *const ret,
             assert(i == len);
             return TRUE;
         }
+    }
+    else if (*kw_arg_ptr) {
+        (*kw_arg_ptr)->references++;
     }
     return FALSE;
 }
@@ -7282,6 +7300,7 @@ compile_case3(rb_iseq_t *iseq, LINK_ANCHOR *const ret, const NODE *const orig_no
 
             kw_arg = rb_xmalloc_mul_add(2, sizeof(VALUE), sizeof(struct rb_callinfo_kwarg));
             kw_arg->keyword_len = 2;
+            kw_arg->references = 0; // owner
             kw_arg->keywords[0] = ID2SYM(rb_intern("matchee"));
             kw_arg->keywords[1] = ID2SYM(rb_intern("key"));
 
@@ -7305,7 +7324,7 @@ compile_case3(rb_iseq_t *iseq, LINK_ANCHOR *const ret, const NODE *const orig_no
             ADD_SEND(cond_seq, orig_node, id_core_sprintf, INT2FIX(3));
             ADD_INSN1(cond_seq, orig_node, topn, INT2FIX(CASE3_BI_OFFSET_KEY_ERROR_MATCHEE + 4));
             ADD_INSN1(cond_seq, orig_node, topn, INT2FIX(CASE3_BI_OFFSET_KEY_ERROR_KEY + 5));
-            ADD_SEND_R(cond_seq, orig_node, rb_intern("new"), INT2FIX(1), NULL, INT2FIX(VM_CALL_KWARG), kw_arg);
+            ADD_SEND_R(cond_seq, orig_node, rb_intern("new"), INT2FIX(1), NULL, INT2FIX(VM_CALL_KWARG), kw_arg); // TODO: are tehse args sometimes set?
             ADD_SEND(cond_seq, orig_node, id_core_raise, INT2FIX(1));
 
             ADD_LABEL(cond_seq, fin);
@@ -8532,6 +8551,8 @@ compile_call(rb_iseq_t *iseq, LINK_ANCHOR *const ret, const NODE *const node, co
         }
     }
 
+    // struct rb_callinfo_kwarg *prev_keywords = keywords;
+
     /* args */
     if (type != NODE_VCALL) {
         argc = setup_args(iseq, args, node->nd_args, &flag, &keywords);
@@ -8540,6 +8561,14 @@ compile_call(rb_iseq_t *iseq, LINK_ANCHOR *const ret, const NODE *const node, co
     else {
         argc = INT2FIX(0);
     }
+
+    // if (keywords && prev_keywords == keywords) {
+    //     // keyword->references++; // TODO: can I count in setup args instead?
+    //     // struct rb_callinfo_kwarg *kw_arg =
+    //     //         rb_xmalloc_mul_add(keywords->keyword_len, sizeof(VALUE), sizeof(struct rb_callinfo_kwarg));
+    //     //         memcpy(kw_arg, keywords, keywords->keyword_len * sizeof(VALUE) + sizeof(struct rb_callinfo_kwarg));
+    //     // keywords = kw_arg;
+    // }
 
     ADD_SEQ(ret, recv);
     ADD_SEQ(ret, args);
@@ -8950,6 +8979,9 @@ compile_super(rb_iseq_t *iseq, LINK_ANCHOR *const ret, const NODE *const node, i
 
     INIT_ANCHOR(args);
     ISEQ_COMPILE_DATA(iseq)->current_block = NULL;
+
+    // struct rb_callinfo_kwarg *prev_keywords = keywords;
+
     if (type == NODE_SUPER) {
         VALUE vargc = setup_args(iseq, args, node->nd_args, &flag, &keywords);
         CHECK(!NIL_P(vargc));
@@ -9050,6 +9082,13 @@ compile_super(rb_iseq_t *iseq, LINK_ANCHOR *const ret, const NODE *const node, i
         }
     }
 
+    // if (keywords && prev_keywords == keywords) {
+    //     struct rb_callinfo_kwarg *kw_arg =
+    //             rb_xmalloc_mul_add(keywords->keyword_len, sizeof(VALUE), sizeof(struct rb_callinfo_kwarg));
+    //             memcpy(kw_arg, keywords, keywords->keyword_len * sizeof(VALUE) + sizeof(struct rb_callinfo_kwarg));
+    //     keywords = kw_arg;
+    // }
+
     flag |= VM_CALL_SUPER | VM_CALL_FCALL;
     if (type == NODE_ZSUPER) flag |= VM_CALL_ZSUPER;
     ADD_INSN(ret, node, putself);
@@ -9083,6 +9122,8 @@ compile_yield(rb_iseq_t *iseq, LINK_ANCHOR *const ret, const NODE *const node, i
       default: /* valid */;
     }
 
+    // struct rb_callinfo_kwarg *prev_keywords = keywords;
+
     if (node->nd_head) {
         argc = setup_args(iseq, args, node->nd_head, &flag, &keywords);
         CHECK(!NIL_P(argc));
@@ -9090,6 +9131,13 @@ compile_yield(rb_iseq_t *iseq, LINK_ANCHOR *const ret, const NODE *const node, i
     else {
         argc = INT2FIX(0);
     }
+
+    // if (keywords && prev_keywords == keywords) {
+    //     struct rb_callinfo_kwarg *kw_arg =
+    //             rb_xmalloc_mul_add(keywords->keyword_len, sizeof(VALUE), sizeof(struct rb_callinfo_kwarg));
+    //             memcpy(kw_arg, keywords, keywords->keyword_len * sizeof(VALUE) + sizeof(struct rb_callinfo_kwarg));
+    //     keywords = kw_arg;
+    // }
 
     ADD_SEQ(ret, args);
     ADD_INSN1(ret, node, invokeblock, new_callinfo(iseq, 0, FIX2INT(argc), flag, keywords, FALSE));
@@ -10475,6 +10523,7 @@ iseq_build_callinfo_from_hash(rb_iseq_t *iseq, VALUE op)
             for (i = 0; i < len; i++) {
                 VALUE kw = RARRAY_AREF(vkw_arg, i);
                 SYM2ID(kw);	/* make immortal */
+                kw_arg->references = 0; // owner
                 kw_arg->keywords[i] = kw;
             }
         }
@@ -11959,6 +12008,7 @@ ibf_load_ci_entries(const struct ibf_load *load,
             int kwlen = (int)ibf_load_small_value(load, &reading_pos);
             if (kwlen > 0) {
                 kwarg = rb_xmalloc_mul_add(kwlen, sizeof(VALUE), sizeof(struct rb_callinfo_kwarg));
+                kwarg->references = 0; // owner
                 kwarg->keyword_len = kwlen;
                 for (int j=0; j<kwlen; j++) {
                     VALUE keyword = ibf_load_small_value(load, &reading_pos);
