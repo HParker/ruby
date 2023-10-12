@@ -275,6 +275,13 @@ struct rb_fiber_struct {
 
 static struct fiber_pool shared_fiber_pool = {NULL, NULL, 0, 0, 0, 0};
 
+void
+free_shared_fiber_pool(void)
+{
+    xfree(shared_fiber_pool.allocations);
+}
+
+
 static ID fiber_initialize_keywords[3] = {0};
 
 /*
@@ -2560,6 +2567,7 @@ rb_threadptr_root_fiber_release(rb_thread_t *th)
 {
     if (th->root_fiber) {
         /* ignore. A root fiber object will free th->ec */
+        ruby_xfree(th->ec->vm_stack);
     }
     else {
         rb_execution_context_t *ec = GET_EC();
@@ -2567,6 +2575,7 @@ rb_threadptr_root_fiber_release(rb_thread_t *th)
         VM_ASSERT(th->ec->fiber_ptr->cont.type == FIBER_CONTEXT);
         VM_ASSERT(th->ec->fiber_ptr->cont.self == 0);
 
+        ruby_xfree(th->ec->vm_stack);
         if (th->ec == ec) {
             rb_ractor_set_current_ec(th->ractor, NULL);
         }

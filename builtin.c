@@ -10,6 +10,12 @@
 
 #else
 
+void
+free_loaded_builtin_table(void)
+{
+}
+
+
 #include "builtin_binary.inc"
 
 static const unsigned char *

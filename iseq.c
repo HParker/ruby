@@ -3389,6 +3389,12 @@ typedef struct insn_data_struct {
 static insn_data_t insn_data[VM_INSTRUCTION_SIZE/2];
 
 void
+free_encoded_insn_data(void)
+{
+    st_free_table(encoded_insn_data);
+}
+
+void
 rb_vm_encoded_insn_data_table_init(void)
 {
 #if OPT_DIRECT_THREADED_CODE || OPT_CALL_THREADED_CODE
