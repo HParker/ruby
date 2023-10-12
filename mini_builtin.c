@@ -10,6 +10,13 @@
 
 #ifndef INCLUDED_BY_BUILTIN_C
 static struct st_table *loaded_builtin_table;
+
+void
+free_loaded_builtin_table(void)
+{
+    if (loaded_builtin_table)
+        st_free_table(loaded_builtin_table);
+}
 #endif
 
 rb_ast_t *rb_builtin_ast(const char *feature_name, VALUE *name_str);
