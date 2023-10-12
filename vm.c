@@ -2050,6 +2050,14 @@ short ruby_vm_redefined_flag[BOP_LAST_];
 static st_table *vm_opt_method_def_table = 0;
 static st_table *vm_opt_mid_table = 0;
 
+void
+free_vm_opt_tables(void)
+{
+    // Address 0x4e23840 is 0 bytes inside a block of size 1,536 free'd
+    st_free_table(vm_opt_method_def_table);
+    st_free_table(vm_opt_mid_table);
+}
+
 static int
 vm_redefinition_check_flag(VALUE klass)
 {
@@ -2968,12 +2976,73 @@ free_loading_table_entry(st_data_t key, st_data_t value, st_data_t arg)
     return ST_DELETE;
 }
 
+void free_default_rand_key(void);
+void free_encoded_insn_data(void);
+void free_environ(void);
+void free_global_enc_table(void);
+void free_loaded_builtin_table(void);
+void free_rb_global_tbl(void);
+void free_shared_fiber_pool(void);
+void free_static_symid_str(void);
+void free_transcoder_table(void);
+void free_vm_opt_tables(void);
+void free_warning(void);
+void free_generic_iv_tbl_(void);
+void free_loaded_features_index(rb_vm_t *vm);
+
+// Extra final free step.
+void rb_objspace_free_objects(void *objspace);
+
 int
 ruby_vm_destruct(rb_vm_t *vm)
 {
     RUBY_FREE_ENTER("vm");
 
     if (vm) {
+        // Extra frees for Valgrind
+        free_default_rand_key();
+        free_encoded_insn_data();
+// #ifndef HAVE_SETPROCTITLE
+//         free_environ();
+// #endif
+        free_global_enc_table();
+        free_loaded_builtin_table();
+
+        free_shared_fiber_pool();
+        free_static_symid_str();
+        free_transcoder_table();
+        free_vm_opt_tables();
+        free_warning();
+        free_rb_global_tbl();
+        free_loaded_features_index(vm);
+        rb_ractor_t *r = vm->ractor.main_ractor;
+        xfree(r->sync.recv_queue.baskets);
+        xfree(r->sync.takers_queue.baskets);
+
+        rb_id_table_free(vm->negative_cme_table);
+        st_free_table(vm->overloaded_cme_table);
+
+        rb_id_table_free(RCLASS(rb_mRubyVMFrozenCore)->m_tbl);
+
+        rb_shape_t *cursor = rb_shape_get_root_shape();
+        rb_shape_t *end = rb_shape_get_shape_by_id(GET_SHAPE_TREE()->next_shape_id);
+        while (cursor < end) {
+            // TODO: 0x1 == SINGLE_CHILD_P
+            if (cursor->edges && !(((uintptr_t)cursor->edges) & 0x1))
+                rb_id_table_free(cursor->edges);
+            cursor += 1;
+        }
+
+        xfree(GET_SHAPE_TREE());
+
+        st_free_table(vm->static_ext_inits);
+        st_free_table(vm->ensure_rollback_table);
+
+        ruby_xfree(vm->postponed_job_buffer);
+        st_free_table(vm->defined_module_hash);
+
+        rb_id_table_free(vm->constant_cache);
+
         rb_thread_t *th = vm->ractor.main_thread;
         struct rb_objspace *objspace = vm->objspace;
         vm->ractor.main_thread = NULL;
@@ -2982,6 +3051,9 @@ ruby_vm_destruct(rb_vm_t *vm)
             rb_fiber_reset_root_local_storage(th);
             thread_free(th);
         }
+
+        ruby_xfree(vm->ractor.main_ractor);
+
         rb_vm_living_threads_init(vm);
         ruby_vm_run_at_exit_hooks(vm);
         if (vm->loading_table) {
@@ -2993,12 +3065,19 @@ ruby_vm_destruct(rb_vm_t *vm)
             st_free_table(vm->frozen_strings);
             vm->frozen_strings = 0;
         }
+
         RB_ALTSTACK_FREE(vm->main_altstack);
+
+        
         if (objspace) {
+            rb_objspace_free_objects(objspace);
+            free_generic_iv_tbl_();
             rb_objspace_free(objspace);
         }
-        rb_native_mutex_destroy(&vm->workqueue_lock);
+
         /* after freeing objspace, you *can't* use ruby_xfree() */
+        rb_native_mutex_destroy(&vm->workqueue_lock);
+
         ruby_mimfree(vm);
         ruby_current_vm_ptr = NULL;
     }
@@ -3371,7 +3450,7 @@ thread_free(void *ptr)
         RUBY_GC_INFO("MRI main thread\n");
     }
     else {
-        // ruby_xfree(th->nt);
+        ruby_xfree(th->nt);
         // TODO: MN system collect nt, but without MN system it should be freed here.
         ruby_xfree(th);
     }

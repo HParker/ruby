@@ -135,6 +135,16 @@ compat_init_setproctitle(int argc, char *argv[])
 }
 
 #ifndef HAVE_SETPROCTITLE
+
+// void
+// free_environ(void) {
+//     size_t i;
+//     char **envp = environ;
+//     for (i = 0; envp[i] != NULL; i++)
+//         free(environ[i]);
+//     free(environ);
+// }
+
 void
 setproctitle(const char *fmt, ...)
 {

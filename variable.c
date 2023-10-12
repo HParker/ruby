@@ -46,6 +46,9 @@ RUBY_EXTERN rb_serial_t ruby_vm_global_cvar_state;
 typedef void rb_gvar_compact_t(void *var);
 
 static struct rb_id_table *rb_global_tbl;
+
+
+
 static ID autoload;
 
 // This hash table maps file paths to loadable features. We use this to track
@@ -453,6 +456,31 @@ struct rb_global_entry {
     ID id;
     bool ractor_local;
 };
+
+static enum rb_id_table_iterator_result
+free_global_entry_i(ID key, VALUE val, void *arg)
+{
+    if (((struct rb_global_entry *)val)->var->counter == 1) {
+        ruby_xfree(((struct rb_global_entry *)val)->var);
+    } else {
+        ((struct rb_global_entry *)val)->var->counter--;
+    }
+    ruby_xfree((struct rb_global_entry *)val);
+    return ID_TABLE_DELETE;
+}
+
+void
+free_rb_global_tbl(void)
+{
+    rb_id_table_foreach(rb_global_tbl, free_global_entry_i, 0);
+    rb_id_table_free(rb_global_tbl);
+}
+
+void
+free_generic_iv_tbl_(void)
+{
+    st_free_table(generic_iv_tbl_);
+}
 
 static struct rb_global_entry*
 rb_find_global_entry(ID id)
