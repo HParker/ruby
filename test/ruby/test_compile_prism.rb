@@ -86,7 +86,53 @@ module Prism
 
     def test_DefinedNode
       # TODO:
-      # test_prism_eval("defined? foo")
+      test_prism_eval("defined? nil")
+      test_prism_eval("defined? self")
+      test_prism_eval("defined? true")
+      test_prism_eval("defined? false")
+      test_prism_eval("defined? 'str'")
+      test_prism_eval("defined? a && b")
+      test_prism_eval("defined? a || b")
+      test_prism_eval("a = 1; defined? a")
+      test_prism_eval("defined? @a")
+      test_prism_eval("defined? $a")
+      test_prism_eval("defined? @@a")
+      test_prism_eval("defined? A")
+      test_prism_eval("defined? ::A")
+      test_prism_eval("defined? ::A")
+      test_prism_eval("defined? yield")
+      test_prism_eval("defined? super")
+
+      test_prism_eval("a = 0; defined? a = 1")
+      test_prism_eval("defined? @a = 1")
+      test_prism_eval("defined? @@a = 1")
+      test_prism_eval("defined? $a = 1")
+      test_prism_eval("defined? A = 1")
+      test_prism_eval("defined? ::A = 1")
+
+      test_prism_eval("a = 0; defined? a ||= 1")
+      test_prism_eval("defined? @a ||= 1")
+      test_prism_eval("defined? @@a ||= 1")
+      test_prism_eval("defined? $a ||= 1")
+      test_prism_eval("defined? A ||= 1")
+
+      test_prism_eval("a = 0; defined? a &&= 1")
+      test_prism_eval("defined? @a &&= 1")
+      test_prism_eval("defined? @@a &&= 1")
+      test_prism_eval("defined? $a &&= 1")
+      test_prism_eval("defined? A &&= 1")
+
+      test_prism_eval("a = 0; defined? a ^= 1")
+      test_prism_eval("defined? @a ^= 1")
+      test_prism_eval("defined? @@a ^= 1")
+      test_prism_eval("defined? $a ^= 1")
+      test_prism_eval("defined? A ^= 1")
+
+      test_prism_eval("a = 0; defined? a *= 1")
+      test_prism_eval("defined? @a *= 1")
+      test_prism_eval("defined? @@a *= 1")
+      test_prism_eval("defined? $a *= 1")
+      test_prism_eval("defined? A *= 1")
     end
 
     def test_GlobalVariableReadNode
