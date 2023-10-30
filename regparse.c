@@ -514,6 +514,9 @@ static int
 i_free_name_entry(UChar* key, NameEntry* e, void* arg ARG_UNUSED)
 {
   xfree(e->name);
+  /* if (e->back_refs) { */
+  /*   xfree(e->back_refs); */
+  /* } */
   xfree(e->back_refs);
   xfree(key);
   xfree(e);
@@ -524,8 +527,8 @@ static int
 names_clear(regex_t* reg)
 {
   NameTable* t = (NameTable* )reg->name_table;
-
   if (IS_NOT_NULL(t)) {
+    fprintf(stderr, "freeing regex %s\n", reg->p);
     onig_st_foreach(t, (st_foreach_callback_func *)i_free_name_entry, 0);
   }
   return 0;
